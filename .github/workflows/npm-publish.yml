@@ -1,0 +1,108 @@
+name: "Node.js build + publish"
+
+permissions:
+  contents: read
+  id-token: write
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use.'
+        type: string
+        required: false
+        default: '20'
+      working-directory:
+        description: 'Relative path to the package directory (where package.json lives).'
+        type: string
+        required: false
+        default: '.'
+      registry-url:
+        description: 'npm registry URL (used for setup-node).'
+        type: string
+        required: false
+        default: 'https://registry.npmjs.org'
+      auth-method:
+        description: 'How to authenticate to npm (token or oidc).'
+        type: string
+        required: false
+        default: 'token'
+      publish:
+        description: 'Whether to publish to npm.'
+        type: boolean
+        required: false
+        default: false
+      publish-tag:
+        description: 'npm dist-tag for publish (e.g. latest, next).'
+        type: string
+        required: false
+        default: 'latest'
+      build-command:
+        description: 'Build command to run (can be empty to skip build).'
+        type: string
+        required: false
+        default: 'npm run build'
+      provenance:
+        description: 'Generate provenance attestation (requires npm >= 9.5.0).'
+        type: boolean
+        required: false
+        default: true
+    secrets:
+      NPM_TOKEN:
+        description: 'npm authentication token (required when publish=true and auth-method=token).'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+
+      - name: Install dependencies
+        run: |
+          cd "${{ inputs.working-directory }}"
+          npm ci
+
+      - name: Run tests
+        run: |
+          cd "${{ inputs.working-directory }}"
+          npm test
+
+      - name: Build (optional)
+        if: ${{ inputs.build-command != '' }}
+        run: |
+          cd "${{ inputs.working-directory }}"
+          ${{ inputs.build-command }}
+
+      - name: Configure npm for token auth (if enabled)
+        if: ${{ inputs.auth-method == 'token' && inputs.publish }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd "${{ inputs.working-directory }}"
+          
+          if [[ -z "${NPM_TOKEN}" ]]; then
+            echo "NPM_TOKEN is required to publish with auth-method=token." >&2
+            exit 1
+          fi
+          
+          # Ensure npm is authenticated for the registry
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          
+          echo "✓ Configured npm for token authentication"
+
+      - name: Publish to npm (optional)
+        if: ${{ inputs.publish }}
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          NODE_AUTH_TOKEN: ${{ inputs.auth-method == 'token' && secrets.NPM_TOKEN || '' }}
+        run: |
+          npm publish --tag "${{ inputs.publish-tag }}"${{ inputs.provenance && ' --provenance' || '' }}
