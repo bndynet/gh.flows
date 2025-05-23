@@ -1,0 +1,49 @@
+name: "Deploy folder to GitHub Pages"
+
+permissions:
+  contents: write
+  id-token: write
+
+on:
+  workflow_call:
+    inputs:
+      deploy-folder:
+        description: 'Folder path to deploy to gh-pages (relative to repo root).'
+        type: string
+        required: false
+        default: 'public'
+      target-branch:
+        description: 'GitHub Pages branch to publish to.'
+        type: string
+        required: false
+        default: 'gh-pages'
+    secrets:
+      GITHUB_TOKEN:
+        description: 'GitHub token used to push to gh-pages.'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Ensure deploy folder exists
+        run: |
+          if [ ! -d "${{ inputs.deploy-folder }}" ]; then
+            echo "Deploy folder '${{ inputs.deploy-folder }}' does not exist."
+            exit 1
+          fi
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ inputs.deploy-folder }}
+          publish_branch: ${{ inputs.target-branch }}
+          commit_message: ${{ github.event.head_commit.message }}
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'

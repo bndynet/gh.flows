@@ -1,4 +1,4 @@
-name: "Node.js build + publish"
+name: "Node.js build + test + lint + publish"
 
 permissions:
   contents: read
@@ -22,27 +22,37 @@ on:
         type: string
         required: false
         default: 'https://registry.npmjs.org'
-      auth-method:
-        description: 'How to authenticate to npm (token or oidc).'
+      lint-command:
+        description: 'Lint command to run (can be empty to skip lint).'
         type: string
         required: false
-        default: 'token'
-      publish:
-        description: 'Whether to publish to npm.'
-        type: boolean
-        required: false
-        default: false
-      publish-tag:
-        description: 'npm dist-tag for publish (e.g. latest, next).'
+        default: 'npm run lint'
+      test-command:
+        description: 'Test command to run (can be empty to skip tests).'
         type: string
         required: false
-        default: 'latest'
+        default: 'npm test'
       build-command:
         description: 'Build command to run (can be empty to skip build).'
         type: string
         required: false
         default: 'npm run build'
-      provenance:
+      publish-enabled:
+        description: 'Whether to publish to npm.'
+        type: boolean
+        required: false
+        default: false
+      publish-auth-method:
+        description: 'How to authenticate to npm when publishing (token or oidc).'
+        type: string
+        required: false
+        default: 'token'
+      publish-tag:
+        description: 'npm dist-tag for publish (e.g. latest, next).'
+        type: string
+        required: false
+        default: 'latest'
+      publish-provenance:
         description: 'Generate provenance attestation (requires npm >= 9.5.0).'
         type: boolean
         required: false
@@ -71,9 +81,16 @@ jobs:
           npm ci
 
       - name: Run tests
+        if: ${{ inputs.test-command != '' }}
         run: |
           cd "${{ inputs.working-directory }}"
-          npm test
+          ${{ inputs.test-command }}
+
+      - name: Run lint (optional)
+        if: ${{ inputs.lint-command != '' }}
+        run: |
+          cd "${{ inputs.working-directory }}"
+          ${{ inputs.lint-command }}
 
       - name: Build (optional)
         if: ${{ inputs.build-command != '' }}
@@ -82,7 +99,7 @@ jobs:
           ${{ inputs.build-command }}
 
       - name: Configure npm for token auth (if enabled)
-        if: ${{ inputs.auth-method == 'token' && inputs.publish }}
+        if: ${{ inputs.publish-auth-method == 'token' && inputs.publish-enabled }}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -100,9 +117,9 @@ jobs:
           echo "✓ Configured npm for token authentication"
 
       - name: Publish to npm (optional)
-        if: ${{ inputs.publish }}
+        if: ${{ inputs.publish-enabled }}
         working-directory: ${{ inputs.working-directory }}
         env:
-          NODE_AUTH_TOKEN: ${{ inputs.auth-method == 'token' && secrets.NPM_TOKEN || '' }}
+          NODE_AUTH_TOKEN: ${{ inputs.publish-auth-method == 'token' && secrets.NPM_TOKEN || '' }}
         run: |
-          npm publish --tag "${{ inputs.publish-tag }}"${{ inputs.provenance && ' --provenance' || '' }}
+          npm publish --tag "${{ inputs.publish-tag }}"${{ inputs.publish-provenance && ' --provenance' || '' }}
