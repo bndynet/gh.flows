@@ -57,6 +57,16 @@ on:
         type: boolean
         required: false
         default: true
+      artifact-paths:
+        description: 'Paths to upload as artifacts (comma-separated), e.g., dist,build,.next'
+        type: string
+        required: false
+        default: ''
+      artifact-name:
+        description: 'Name for the uploaded artifact'
+        type: string
+        required: false
+        default: 'artifacts'
     secrets:
       NPM_TOKEN:
         description: 'npm authentication token (required when publish=true and auth-method=token).'
@@ -97,6 +107,15 @@ jobs:
         run: |
           cd "${{ inputs.working-directory }}"
           ${{ inputs.build-command }}
+
+      - name: Upload artifacts (if paths specified)
+        if: ${{ inputs.artifact-paths != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ join(fromJSON(format('["{0}"]', inputs.artifact-paths)), ',') }}
+          retention-days: 3
+          if-no-files-found: warn
 
       - name: Configure npm for token auth (if enabled)
         if: ${{ inputs.publish-auth-method == 'token' && inputs.publish-enabled }}

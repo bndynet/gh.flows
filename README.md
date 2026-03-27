@@ -34,6 +34,8 @@ jobs:
       publish-auth-method: 'token'                 # default: token (or oidc)
       publish-tag: 'latest'                        # default: 'latest'
       publish-provenance: true                     # default: true
+      artifact-paths: ''                           # default: '', e.g., 'dist,build,.next'
+      artifact-name: 'artifacts'                   # default: 'artifacts' 
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}          # when publish-enabled=true and publish-auth-method=token
 ```
@@ -60,6 +62,7 @@ jobs:
   deploy:
     uses: bndynet/gh.flows/.github/workflows/deploy-gh-pages.yml@main
     with:
+      artifact-name: ''         # default: '', e.g. 'artifacts'
       deploy-folder: 'public'   # default: 'public'
       target-branch: 'gh-pages' # default: 'gh-pages'
     secrets:
