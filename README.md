@@ -59,12 +59,11 @@ permissions:
   id-token: write
 
 jobs:
+  #needs: build
   deploy:
     uses: bndynet/gh.flows/.github/workflows/deploy-gh-pages.yml@main
     with:
       artifact-name: ''         # default: '', e.g. 'artifacts'
       deploy-folder: 'public'   # default: 'public'
       target-branch: 'gh-pages' # default: 'gh-pages'
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
