@@ -22,10 +22,6 @@ on:
         type: string
         required: false
         default: 'gh-pages'
-    secrets:
-      GITHUB_TOKEN:
-        description: 'GitHub token used to push to gh-pages.'
-        required: true
 
 jobs:
   deploy:
