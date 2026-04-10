@@ -1,7 +1,7 @@
-name: "Node.js build + test + lint + publish"
+name: "Node.js build + test + lint + publish + deploy"
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 on:
@@ -57,16 +57,11 @@ on:
         type: boolean
         required: false
         default: true
-      artifact-paths:
-        description: 'Paths to upload as artifacts (comma-separated), e.g., dist,build,.next'
+      deploy-folder:
+        description: 'Folder path to deploy to gh-pages (relative to repo root).'
         type: string
         required: false
         default: ''
-      artifact-name:
-        description: 'Name for the uploaded artifact'
-        type: string
-        required: false
-        default: 'artifacts'
     secrets:
       NPM_TOKEN:
         description: 'npm authentication token (required when publish=true and auth-method=token).'
@@ -108,15 +103,6 @@ jobs:
           cd "${{ inputs.working-directory }}"
           ${{ inputs.build-command }}
 
-      - name: Upload artifacts (if paths specified)
-        if: ${{ inputs.artifact-paths != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.artifact-name }}
-          path: ${{ join(fromJSON(format('["{0}"]', inputs.artifact-paths)), ',') }}
-          retention-days: 3
-          if-no-files-found: warn
-
       - name: Configure npm for token auth (if enabled)
         if: ${{ inputs.publish-auth-method == 'token' && inputs.publish-enabled }}
         env:
@@ -142,3 +128,14 @@ jobs:
           NODE_AUTH_TOKEN: ${{ inputs.publish-auth-method == 'token' && secrets.NPM_TOKEN || '' }}
         run: |
           npm publish --tag "${{ inputs.publish-tag }}"${{ inputs.publish-provenance && ' --provenance' || '' }}
+
+      - name: Deploy to GitHub Pages
+        if: ${{ inputs.deploy-folder != '' }}
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ inputs.deploy-folder }}
+          publish_branch: 'gh-pages'
+          commit_message: ${{ github.event.head_commit.message }}
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
