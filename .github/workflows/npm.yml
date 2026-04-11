@@ -42,6 +42,11 @@ on:
         type: boolean
         required: false
         default: false
+      publish-version:
+        description: 'When publish-enabled: semver bump (patch/minor/major), then commit+tag+push after successful npm publish. Ignored if publish-enabled is false.'
+        type: string
+        required: false
+        default: 'none'
       publish-auth-method:
         description: 'How to authenticate to npm when publishing (token or oidc).'
         type: string
@@ -73,6 +78,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -97,6 +104,15 @@ jobs:
           cd "${{ inputs.working-directory }}"
           ${{ inputs.lint-command }}
 
+      - name: Apply package version bump (no git commit yet)
+        if: ${{ inputs.publish-enabled && inputs.publish-version != 'none' && inputs.publish-version != '' }}
+        env:
+          BUMP: ${{ inputs.publish-version }}
+          WD: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          (cd "${WD}" && npm version "${BUMP}" --no-git-tag-version)
+
       - name: Build (optional)
         if: ${{ inputs.build-command != '' }}
         run: |
@@ -107,6 +123,7 @@ jobs:
         if: ${{ inputs.publish-auth-method == 'token' && inputs.publish-enabled }}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          REG: ${{ inputs.registry-url }}
         run: |
           cd "${{ inputs.working-directory }}"
           
@@ -115,9 +132,9 @@ jobs:
             exit 1
           fi
           
-          # Ensure npm is authenticated for the registry
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          HOST="$(node -p "new URL(process.env.REG).host")"
+          echo "//${HOST}/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          echo "registry=${REG}" >> ~/.npmrc
           
           echo "✓ Configured npm for token authentication"
 
@@ -129,6 +146,26 @@ jobs:
         run: |
           npm publish --tag "${{ inputs.publish-tag }}"${{ inputs.publish-provenance && ' --provenance' || '' }}
 
+      - name: Commit and tag release version
+        if: ${{ inputs.publish-enabled && inputs.publish-version != 'none' && inputs.publish-version != '' }}
+        env:
+          WD: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VER="$(cd "${WD}" && node -p "require('./package.json').version")"
+          git add "${WD}/package.json"
+          if [[ -f "${WD}/package-lock.json" ]]; then git add "${WD}/package-lock.json"; fi
+          if git diff --cached --quiet; then
+            echo "No staged version changes; skipping commit."
+            exit 0
+          fi
+          git commit -m "chore(release): v${VER}"
+          git tag "v${VER}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "refs/tags/v${VER}"
+
       - name: Deploy to GitHub Pages
         if: ${{ inputs.deploy-folder != '' }}
         uses: peaceiris/actions-gh-pages@v4
@@ -136,6 +173,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{ inputs.deploy-folder }}
           publish_branch: 'gh-pages'
-          commit_message: ${{ github.event.head_commit.message }}
+          commit_message: ${{ github.event.head_commit.message || format('Deploy {0}', github.sha) }}
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
