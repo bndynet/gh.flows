@@ -10,7 +10,7 @@ This repository provides reusable GitHub Actions workflows.
 
 
 ```yaml
-name: Publish Package
+name: Build+Publish
 
 on:
   release:
@@ -50,7 +50,7 @@ jobs:
 ```
 
 ```yaml
-name: Publish Package
+name: Build+Publish
 
 on:
   release:
