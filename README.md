@@ -17,14 +17,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
   publish:
     uses: bndynet/gh.flows/.github/workflows/npm.yml@main
     with:
-      node-version: '20'                           # default: '20'
+      node-version: '24'                           # default: '24'
       working-directory: '.'                       # default: '.'
       registry-url: 'https://registry.npmjs.org'   # default registry
       lint-command: 'npm run lint'                 # default: 'npm run lint'
