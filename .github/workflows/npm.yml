@@ -11,7 +11,7 @@ on:
         description: 'Node.js version to use.'
         type: string
         required: false
-        default: '20'
+        default: '24'
       working-directory:
         description: 'Relative path to the package directory (where package.json lives).'
         type: string
