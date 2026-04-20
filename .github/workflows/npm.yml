@@ -52,16 +52,11 @@ on:
         type: string
         required: false
         default: 'token'
-      publish-tag:
-        description: 'npm dist-tag for publish (e.g. latest, next).'
+      publish-command:
+        description: 'Publish command to run (empty: npm publish --tag "latest" --provenance).'
         type: string
         required: false
-        default: 'latest'
-      publish-provenance:
-        description: 'Generate provenance attestation (requires npm >= 9.5.0).'
-        type: boolean
-        required: false
-        default: true
+        default: ''
       deploy-folder:
         description: 'Folder path to deploy to gh-pages (relative to repo root).'
         type: string
@@ -144,7 +139,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ inputs.publish-auth-method == 'token' && secrets.NPM_TOKEN || '' }}
         run: |
-          npm publish --tag "${{ inputs.publish-tag }}"${{ inputs.publish-provenance && ' --provenance' || '' }}
+          ${{ inputs.publish-command != '' && inputs.publish-command || 'npm publish --tag "latest" --provenance' }}
 
       - name: Commit and tag release version
         if: ${{ inputs.publish-enabled && inputs.publish-version != 'none' && inputs.publish-version != '' }}
