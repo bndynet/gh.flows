@@ -49,6 +49,8 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}                          # when publish-enabled=true and publish-auth-method=token
 ```
 
+**For monorepo of npm packages:**
+
 ```yaml
 name: Build+Publish
 
@@ -81,18 +83,18 @@ jobs:
   publish:
     uses: bndynet/gh.flows/.github/workflows/npm.yml@main
     with:
-      node-version: '24'                                           # default: '24'
-      working-directory: '.'                                       # default: '.'
-      registry-url: 'https://registry.npmjs.org'                   # default registry
-      lint-command: 'npm run lint'                                 # default: 'npm run lint'
-      test-command: 'npm test'                                     # default: 'npm test'
-      build-command: 'npm run build'                               # default: 'npm run build'
+      node-version: '24'
+      working-directory: '.'
+      registry-url: 'https://registry.npmjs.org'
+      lint-command: 'npm run lint'
+      test-command: 'npm test'
+      build-command: 'npm run build'
       publish-enabled: ${{ github.event_name == 'release' || inputs.publish_enabled }} 
-      publish-version: ${{ inputs['publish-version'] }}            # default: none, patch/minor/major
-      publish-auth-method: 'token'                                 # default: token (or oidc)
-      publish-tag: 'latest'                                        # default: 'latest'
-      publish-provenance: true                                     # default: true
-      deploy-folder: ''                                            # default: '', e.g., 'dist,build,.next'
+      publish-version: ${{ inputs['publish-version'] }}            # none, patch/minor/major
+      publish-auth-method: 'token'                                 # token (or oidc)
+      publish-version-command: ${{ format('npm run version -- {0}', inputs['publish-version']) }}
+      publish-command: 'npm run publish:packages'                  # empty: npm publish --tag "latest" --provenance
+      deploy-folder: 'app/demo/demo-dist'                          # default: '', e.g., 'dist,build,.next'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}                          # when publish-enabled=true and publish-auth-method=token
 ```
