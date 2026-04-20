@@ -147,15 +147,28 @@ jobs:
           WD: ${{ inputs.working-directory }}
         run: |
           set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           VER="$(cd "${WD}" && node -p "require('./package.json').version")"
-          git add "${WD}/package.json"
-          if [[ -f "${WD}/package-lock.json" ]]; then git add "${WD}/package-lock.json"; fi
+
+          mapfile -d '' FILES < <(
+            find "${WD}" \
+              \( -type d -name node_modules -o -type d -name .git \) -prune -o \
+              -type f \( -name package.json -o -name package-lock.json -o -name npm-shrinkwrap.json \) \
+              -print0
+          )
+
+          if [[ "${#FILES[@]}" -gt 0 ]]; then
+            git add "${FILES[@]}"
+          fi
+
           if git diff --cached --quiet; then
             echo "No staged version changes; skipping commit."
             exit 0
           fi
+
           git commit -m "chore(release): v${VER}"
           git tag "v${VER}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
