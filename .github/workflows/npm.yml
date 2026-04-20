@@ -47,13 +47,18 @@ on:
         type: string
         required: false
         default: 'none'
+      publish-version-command:
+        description: 'Custom version bump command to run. If empty, use npm version <publish-version> --no-git-tag-version.'
+        type: string
+        required: false
+        default: ''
       publish-auth-method:
         description: 'How to authenticate to npm when publishing (token or oidc).'
         type: string
         required: false
         default: 'token'
       publish-command:
-        description: 'Publish command to run (empty: npm publish --tag "latest" --provenance).'
+        description: 'Custom publish command to run. If empty, use npm publish --tag "latest" --provenance.'
         type: string
         required: false
         default: ''
@@ -104,9 +109,15 @@ jobs:
         env:
           BUMP: ${{ inputs.publish-version }}
           WD: ${{ inputs.working-directory }}
+          VERSION_COMMAND: ${{ inputs.publish-version-command }}
         run: |
           set -euo pipefail
-          (cd "${WD}" && npm version "${BUMP}" --no-git-tag-version)
+          cd "${WD}"
+          if [[ -n "${VERSION_COMMAND}" ]]; then
+            ${VERSION_COMMAND}
+          else
+            npm version "${BUMP}" --no-git-tag-version
+          fi
 
       - name: Build (optional)
         if: ${{ inputs.build-command != '' }}
