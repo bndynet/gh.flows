@@ -94,7 +94,7 @@ jobs:
       publish-auth-method: 'token'                                 # token (or oidc)
       publish-version-command: ${{ format('npm run version -- {0}', inputs['publish-version']) }}
       publish-command: 'npm run publish:packages'                  # empty: npm publish --tag "latest" --provenance
-      deploy-folder: 'app/demo/demo-dist'                          # default: '', e.g., 'dist,build,.next'
+      deploy-folder: 'apps/demo/demo-dist'                          # default: '', e.g., 'dist,build,.next'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}                          # when publish-enabled=true and publish-auth-method=token
 ```
