@@ -26,12 +26,12 @@ on:
         description: 'Lint command to run (can be empty to skip lint).'
         type: string
         required: false
-        default: 'npm run lint'
+        default: ''
       test-command:
         description: 'Test command to run (can be empty to skip tests).'
         type: string
         required: false
-        default: 'npm test'
+        default: ''
       build-command:
         description: 'Build command to run (can be empty to skip build).'
         type: string
