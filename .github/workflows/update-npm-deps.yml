@@ -31,7 +31,7 @@ jobs:
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.default_branch }}
-          token: ${{ secrets.update-npm-deps-bot }}
+          token: ${{ secrets.UPDATE_NPM_DEPS_BOT }}
           path: repo
 
       - name: Setup Node
@@ -63,7 +63,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.update-npm-deps-bot }}
+          token: ${{ secrets.UPDATE_NPM_DEPS_BOT }}
           path: repo
           commit-message: "chore(deps): update selected npm dependencies"
           title: "chore(deps): update selected npm dependencies"
