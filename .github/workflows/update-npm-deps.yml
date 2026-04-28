@@ -3,7 +3,7 @@ name: Update npm dependencies in multiple repos
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 2 * * *"  
+    - cron: "0 2 * * *"
 
 permissions:
   contents: write
@@ -20,9 +20,11 @@ jobs:
             default_branch: main
             node_version: 24
             packages: "@bndynet/vue-site"
+
           - repo: bndynet/icharts
             default_branch: main
             node_version: 24
+            project_path: site
             packages: "@bndynet/vue-site"
 
     steps:
@@ -39,14 +41,14 @@ jobs:
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
-          cache-dependency-path: repo/package-lock.json
+          cache-dependency-path: repo/${{ matrix.project_path || '.' }}/package-lock.json
 
       - name: Install dependencies
-        working-directory: repo
+        working-directory: repo/${{ matrix.project_path || '.' }}
         run: npm ci
 
       - name: Update selected packages
-        working-directory: repo
+        working-directory: repo/${{ matrix.project_path || '.' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -56,7 +58,7 @@ jobs:
           done
 
       - name: Run tests
-        working-directory: repo
+        working-directory: repo/${{ matrix.project_path || '.' }}
         run: |
           npm run build --if-present
 
@@ -70,6 +72,8 @@ jobs:
           body: |
             This PR was created automatically by GitHub Actions.
 
+            Repo: ${{ matrix.repo }}
+            Project path: ${{ matrix.project_path || '.' }}
             Updated packages:
             ${{ matrix.packages }}
           branch: "chore/deps-update-${{ matrix.repo }}"
