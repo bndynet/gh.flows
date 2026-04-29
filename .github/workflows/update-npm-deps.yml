@@ -19,6 +19,7 @@ jobs:
           - repo: bndynet/ichat
             default_branch: main
             node_version: 24
+            project_path: apps/demo
             packages: "@bndynet/vue-site"
 
           - repo: bndynet/icharts
