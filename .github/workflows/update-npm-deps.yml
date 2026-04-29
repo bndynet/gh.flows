@@ -32,7 +32,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
-          ref: ${{ matrix.default_branch }}
           token: ${{ secrets.UPDATE_NPM_DEPS_BOT }}
           path: repo
 
