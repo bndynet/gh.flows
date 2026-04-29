@@ -36,16 +36,28 @@ jobs:
           token: ${{ secrets.UPDATE_NPM_DEPS_BOT }}
           path: repo
 
-      - name: Resolve project path
+      - name: Resolve paths
         shell: bash
         run: |
-          if [ -n "${{ matrix.project_path }}" ]; then
-            echo "PROJECT_DIR=repo/${{ matrix.project_path }}" >> "$GITHUB_ENV"
-            echo "LOCKFILE=repo/${{ matrix.project_path }}/package-lock.json" >> "$GITHUB_ENV"
+          set -euo pipefail
+
+          ROOT_DIR="repo"
+          PROJECT_PATH="${{ matrix.project_path }}"
+          PROJECT_DIR="repo/${PROJECT_PATH}"
+
+          if [ -f "${PROJECT_DIR}/package-lock.json" ]; then
+            echo "USE_PROJECT_LOCKFILE=true" >> "$GITHUB_ENV"
+            echo "PROJECT_HAS_LOCKFILE=true" >> "$GITHUB_ENV"
+            echo "PROJECT_DIR=${PROJECT_DIR}" >> "$GITHUB_ENV"
+            echo "LOCKFILE=${PROJECT_DIR}/package-lock.json" >> "$GITHUB_ENV"
           else
-            echo "PROJECT_DIR=repo" >> "$GITHUB_ENV"
-            echo "LOCKFILE=repo/package-lock.json" >> "$GITHUB_ENV"
+            echo "USE_PROJECT_LOCKFILE=false" >> "$GITHUB_ENV"
+            echo "PROJECT_HAS_LOCKFILE=false" >> "$GITHUB_ENV"
+            echo "PROJECT_DIR=${PROJECT_DIR}" >> "$GITHUB_ENV"
+            echo "LOCKFILE=${ROOT_DIR}/package-lock.json" >> "$GITHUB_ENV"
           fi
+
+          echo "ROOT_DIR=${ROOT_DIR}" >> "$GITHUB_ENV"
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -53,20 +65,21 @@ jobs:
           node-version: ${{ matrix.node_version }}
           cache: npm
           cache-dependency-path: ${{ env.LOCKFILE }}
-          
-      - name: Install dependencies and build in root
-        if: ${{ matrix.project_path }}
-        working-directory: repo
-        run: |
-          npm ci
-          npm run build --if-present
 
-      - name: Install dependencies
-        if: ${{ matrix.project_path }}
+      - name: Install dependencies in root
+        working-directory: ${{ env.ROOT_DIR }}
+        run: npm ci
+
+      - name: Build in root
+        working-directory: ${{ env.ROOT_DIR }}
+        run: npm run build --if-present
+
+      - name: Install dependencies in project
+        if: ${{ env.PROJECT_HAS_LOCKFILE == 'true' }}
         working-directory: ${{ env.PROJECT_DIR }}
         run: npm ci
 
-      - name: Update selected packages
+      - name: Update selected packages in project
         working-directory: ${{ env.PROJECT_DIR }}
         shell: bash
         run: |
@@ -76,10 +89,9 @@ jobs:
             npm install "${pkg}@latest"
           done
 
-      - name: Run build
+      - name: Build in project
         working-directory: ${{ env.PROJECT_DIR }}
-        run: |
-          npm run build --if-present
+        run: npm run build --if-present
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
@@ -92,7 +104,8 @@ jobs:
             This PR was created automatically by GitHub Actions.
 
             Repo: ${{ matrix.repo }}
-            Project path: ${{ matrix.project_path || 'root' }}
+            Project path: ${{ matrix.project_path }}
+            Lockfile used for cache: ${{ env.LOCKFILE }}
             Updated packages:
             ${{ matrix.packages }}
           branch: "chore/deps-update-${{ strategy.job-index }}"
