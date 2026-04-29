@@ -36,19 +36,30 @@ jobs:
           token: ${{ secrets.UPDATE_NPM_DEPS_BOT }}
           path: repo
 
+      - name: Resolve project path
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.project_path }}" ]; then
+            echo "PROJECT_DIR=repo/${{ matrix.project_path }}" >> "$GITHUB_ENV"
+            echo "LOCKFILE=repo/${{ matrix.project_path }}/package-lock.json" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_DIR=repo" >> "$GITHUB_ENV"
+            echo "LOCKFILE=repo/package-lock.json" >> "$GITHUB_ENV"
+          fi
+
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
-          cache-dependency-path: repo/${{ matrix.project_path || '.' }}/package-lock.json
+          cache-dependency-path: ${{ env.LOCKFILE }}
 
       - name: Install dependencies
-        working-directory: repo/${{ matrix.project_path || '.' }}
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npm ci
 
       - name: Update selected packages
-        working-directory: repo/${{ matrix.project_path || '.' }}
+        working-directory: ${{ env.PROJECT_DIR }}
         shell: bash
         run: |
           set -euo pipefail
@@ -58,7 +69,7 @@ jobs:
           done
 
       - name: Run tests
-        working-directory: repo/${{ matrix.project_path || '.' }}
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           npm run build --if-present
 
@@ -73,9 +84,9 @@ jobs:
             This PR was created automatically by GitHub Actions.
 
             Repo: ${{ matrix.repo }}
-            Project path: ${{ matrix.project_path || '.' }}
+            Project path: ${{ matrix.project_path || 'root' }}
             Updated packages:
             ${{ matrix.packages }}
-          branch: "chore/deps-update-${{ matrix.repo }}"
+          branch: "chore/deps-update-${{ strategy.job-index }}"
           base: ${{ matrix.default_branch }}
           delete-branch: true
