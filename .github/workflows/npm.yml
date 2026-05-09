@@ -67,6 +67,11 @@ on:
         type: string
         required: false
         default: ''
+      cname:
+        description: 'Custom domain for GitHub Pages. Leave empty to skip.'
+        type: string
+        required: false
+        default: ''
     secrets:
       NPM_TOKEN:
         description: 'npm authentication token (required when publish=true and auth-method=token).'
@@ -193,6 +198,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{ inputs.deploy-folder }}
           publish_branch: 'gh-pages'
+          cname: ${{ inputs.cname }}
           commit_message: ${{ github.event.head_commit.message || format('Deploy {0}', github.sha) }}
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
